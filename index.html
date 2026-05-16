@@ -10,7 +10,6 @@
 </head>
 <body>
 
-    <!-- Üst Menü -->
     <nav class="navbar glass">
         <div class="logo">
             <i class="ph-fill ph-floppy-disk"></i>
@@ -27,51 +26,50 @@
         </div>
     </nav>
 
-    <!-- Ana Çalışma Alanı -->
     <main class="workspace">
-        
-        <!-- Sol Panel: Dosya Bilgileri -->
         <aside class="sidebar panel glass">
-            <div class="panel-header">
-                <h3>DOSYA BİLGİSİ</h3>
-            </div>
+            <div class="panel-header"><h3>DOSYA BİLGİSİ</h3></div>
             <div class="file-info" id="file-info">
                 <p class="text-muted">Henüz dosya yüklenmedi.</p>
             </div>
             
-            <div class="panel-header" style="margin-top: 20px;">
-                <h3>ARAÇLAR</h3>
-            </div>
+            <div class="panel-header" style="margin-top: 20px;"><h3>ARAÇLAR</h3></div>
             <div class="tools-menu">
                 <button class="btn outline-btn" id="btn-base64-decode"><i class="ph ph-lock-key-open"></i> Base64 Çöz</button>
                 <button class="btn outline-btn" id="btn-format-json"><i class="ph ph-brackets-curly"></i> JSON Formatla</button>
             </div>
         </aside>
 
-        <!-- Sağ Panel: Editör -->
         <section class="editor-area panel">
-            <!-- Sekmeler -->
             <div class="tabs">
-                <button class="tab active" data-target="visual-view"><i class="ph ph-tree-structure"></i> Görsel Editör</button>
-                <button class="tab" data-target="raw-view"><i class="ph ph-code"></i> Ham Veri (Raw)</button>
+                <button class="tab" data-target="visual-view"><i class="ph ph-tree-structure"></i> Görsel Editör</button>
+                <button class="tab" data-target="raw-view"><i class="ph ph-code"></i> Metin (Raw)</button>
+                <button class="tab active" data-target="hex-view"><i class="ph ph-hash"></i> Hex Editör (GVAS/Binary)</button>
             </div>
 
-            <!-- Görsel Editör Görünümü (Tree View) -->
-            <div class="view-content active" id="visual-view">
+            <div class="view-content" id="visual-view">
                 <div class="visual-editor-container" id="visual-editor">
-                    <div class="empty-state">
-                        <i class="ph ph-file-dashed"></i>
-                        <p>Düzenlemek için bir save dosyası yükleyin.</p>
-                    </div>
+                    <div class="empty-state"><p>Düzenlemek için bir dosya yükleyin.</p></div>
                 </div>
             </div>
 
-            <!-- Ham Veri Görünümü (Text/JSON) -->
             <div class="view-content" id="raw-view">
-                <textarea id="raw-editor" class="code-editor" spellcheck="false" placeholder="Dosya içeriği burada görünecek..."></textarea>
+                <textarea id="raw-editor" class="code-editor" spellcheck="false"></textarea>
+            </div>
+
+            <div class="view-content active" id="hex-view">
+                <div class="hex-editor-container">
+                    <div class="hex-header">
+                        <div class="hex-offset-col">Offset</div>
+                        <div class="hex-bytes-col">00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F</div>
+                        <div class="hex-ascii-col">ASCII</div>
+                    </div>
+                    <div class="hex-body" id="hex-body">
+                        <div class="empty-state"><p>Binary veya GVAS formatında bir dosya yükleyin.</p></div>
+                    </div>
+                </div>
             </div>
         </section>
-
     </main>
 
     <script src="app.js"></script>
