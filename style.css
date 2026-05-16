@@ -1,0 +1,95 @@
+:root {
+    --bg-base: #0f111a;
+    --bg-panel: #161925;
+    --bg-glass: rgba(22, 25, 37, 0.8);
+    --border-color: #2b3041;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --accent-color: #6366f1;
+    --success-color: #10b981;
+    --font-ui: 'Inter', sans-serif;
+    --font-mono: 'Fira Code', monospace;
+    --transition: all 0.2s ease;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: var(--font-ui);
+    background-color: var(--bg-base);
+    color: var(--text-main);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.glass {
+    background: var(--bg-glass);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+}
+
+/* Navbar */
+.navbar {
+    height: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border-color);
+}
+.logo { font-size: 1.2rem; font-weight: 600; display: flex; align-items: center; gap: 8px; color: var(--accent-color); }
+.nav-actions { display: flex; gap: 12px; }
+
+/* Butonlar */
+.btn {
+    padding: 8px 16px; border-radius: 6px; font-family: var(--font-ui); font-size: 0.85rem; font-weight: 500;
+    cursor: pointer; display: flex; align-items: center; gap: 6px; border: none; transition: var(--transition);
+}
+.primary-btn { background: var(--accent-color); color: white; }
+.primary-btn:hover { filter: brightness(1.1); }
+.success-btn { background: var(--success-color); color: white; }
+.success-btn:disabled { background: #334155; color: #94a3b8; cursor: not-allowed; }
+.outline-btn { background: transparent; border: 1px solid var(--border-color); color: var(--text-main); width: 100%; justify-content: center; margin-bottom: 8px; }
+.outline-btn:hover { background: var(--border-color); }
+
+/* Workspace */
+.workspace { display: flex; flex: 1; overflow: hidden; }
+.sidebar { width: 300px; padding: 20px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; }
+.panel-header h3 { font-size: 0.75rem; color: var(--text-muted); letter-spacing: 1px; margin-bottom: 12px; }
+.file-info { font-size: 0.85rem; background: var(--bg-base); padding: 12px; border-radius: 6px; border: 1px solid var(--border-color); }
+
+.editor-area { flex: 1; display: flex; flex-direction: column; background: var(--bg-panel); }
+
+/* Sekmeler */
+.tabs { display: flex; border-bottom: 1px solid var(--border-color); background: var(--bg-base); }
+.tab {
+    padding: 12px 20px; background: transparent; border: none; color: var(--text-muted); font-weight: 500;
+    cursor: pointer; border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 8px;
+}
+.tab.active { color: var(--accent-color); border-bottom-color: var(--accent-color); background: var(--bg-panel); }
+
+/* Editör İçerikleri */
+.view-content { flex: 1; display: none; overflow: auto; position: relative; }
+.view-content.active { display: block; }
+.empty-state { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: var(--text-muted); }
+.empty-state i { font-size: 3rem; margin-bottom: 10px; opacity: 0.5; }
+
+/* Visual Editor (Tree) */
+.visual-editor-container { padding: 20px; }
+.kv-row { display: flex; align-items: center; margin-bottom: 8px; font-family: var(--font-mono); font-size: 0.85rem; }
+.kv-key { width: 200px; color: #818cf8; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kv-val-input { 
+    flex: 1; background: var(--bg-base); border: 1px solid var(--border-color); color: var(--text-main); 
+    padding: 6px 10px; border-radius: 4px; font-family: var(--font-mono); font-size: 0.85rem;
+}
+.kv-val-input:focus { border-color: var(--accent-color); outline: none; }
+.kv-object-title { margin: 12px 0 8px 0; color: #f8fafc; font-weight: 600; padding-bottom: 4px; border-bottom: 1px dashed var(--border-color); }
+.kv-indent { margin-left: 20px; border-left: 1px solid var(--border-color); padding-left: 15px; }
+
+/* Raw Code Editor */
+.code-editor {
+    width: 100%; height: 100%; background: transparent; border: none; color: #a5b4fc;
+    padding: 20px; font-family: var(--font-mono); font-size: 0.9rem; resize: none; line-height: 1.5;
+}
+.code-editor:focus { outline: none; }
