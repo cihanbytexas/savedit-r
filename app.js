@@ -1,34 +1,26 @@
 document.addEventListener("DOMContentLoaded", () => {
-    
-    // UI Elementleri
     const uploadInput = document.getElementById("upload-save");
     const downloadBtn = document.getElementById("download-save");
-    const rawEditor = document.getElementById("raw-editor");
-    const visualEditor = document.getElementById("visual-editor");
     const fileInfo = document.getElementById("file-info");
     const tabs = document.querySelectorAll(".tab");
     const views = document.querySelectorAll(".view-content");
     
     let currentFileName = "";
-    let currentData = null; // Parse edilmiş JSON objesi tutar (eğer JSON ise)
-    let isJson = false;
+    let fileBuffer = null; // Dosyanın ham baytlarını tutar
+    let uint8Array = null; // Düzenlenebilir bayt dizisi
+    let isGVAS = false;
 
-    // --- Tab Değiştirme Mantığı ---
+    // Tab Değiştirme
     tabs.forEach(tab => {
         tab.addEventListener("click", () => {
             tabs.forEach(t => t.classList.remove("active"));
             views.forEach(v => v.classList.remove("active"));
             tab.classList.add("active");
             document.getElementById(tab.dataset.target).classList.add("active");
-            
-            // Eğer görsel editörden raw editöre geçiliyorsa senkronize et
-            if (tab.dataset.target === "raw-view" && isJson) {
-                rawEditor.value = JSON.stringify(currentData, null, 4);
-            }
         });
     });
 
-    // --- Dosya Yükleme ---
+    // Dosyayı ArrayBuffer olarak okuma (GVAS desteği için kritik bölüm)
     uploadInput.addEventListener("change", (e) => {
         const file = e.target.files[0];
         if (!file) return;
@@ -37,136 +29,125 @@ document.addEventListener("DOMContentLoaded", () => {
         
         const reader = new FileReader();
         reader.onload = (event) => {
-            const content = event.target.result;
-            processContent(content, file);
+            fileBuffer = event.target.result;
+            uint8Array = new Uint8Array(fileBuffer);
+            processBinaryFile(file);
         };
-        reader.readAsText(file);
+        // readAsText YERİNE readAsArrayBuffer kullanıyoruz!
+        reader.readAsArrayBuffer(file); 
     });
 
-    // --- İçeriği İşleme ve JSON Kontrolü ---
-    function processContent(content, file) {
-        rawEditor.value = content;
+    function processBinaryFile(file) {
+        downloadBtn.disabled = false;
         
+        // GVAS Kontrolü (İlk 4 bayt: 47 56 41 53)
+        isGVAS = false;
+        if (uint8Array.length >= 4) {
+            const magic = String.fromCharCode(uint8Array[0], uint8Array[1], uint8Array[2], uint8Array[3]);
+            if (magic === 'GVAS') isGVAS = true;
+        }
+
         fileInfo.innerHTML = `
             <strong>Dosya:</strong> ${file.name} <br>
-            <strong>Boyut:</strong> ${(file.size / 1024).toFixed(2)} KB
+            <strong>Boyut:</strong> ${(file.size / 1024).toFixed(2)} KB <br>
+            <strong>Format:</strong> ${isGVAS ? '<span style="color:#10b981">UE4 GVAS (Binary)</span>' : 'Bilinmeyen Binary/Metin'}
         `;
 
-        try {
-            // Dosyanın JSON olup olmadığını test et
-            currentData = JSON.parse(content);
-            isJson = true;
-            fileInfo.innerHTML += `<br><strong style="color: var(--success-color);">Format: JSON</strong>`;
-            renderVisualEditor(currentData, visualEditor);
-        } catch (error) {
-            // JSON değilse ham metin olarak bırak
-            isJson = false;
-            currentData = null;
-            fileInfo.innerHTML += `<br><strong style="color: #f59e0b;">Format: Bilinmiyor (Metin)</strong>`;
-            visualEditor.innerHTML = `<div class="empty-state"><p>Bu dosya formatı görsel editör tarafından desteklenmiyor. Ham Veri (Raw) sekmesini kullanın.</p></div>`;
+        // Eğer dosya GVAS ise veya binary ise doğrudan Hex Editör tabını aç
+        if (isGVAS) {
+            document.querySelector('[data-target="hex-view"]').click();
+            renderHexEditor();
+            document.getElementById("raw-editor").value = "Bu bir GVAS (Binary) dosyasıdır. Lütfen Hex Editör sekmesini kullanın.";
+        } else {
+            // Normal metin dosyasıysa text'e çevirmeye çalış
+            const textDecoder = new TextDecoder("utf-8");
+            document.getElementById("raw-editor").value = textDecoder.decode(uint8Array);
+            document.querySelector('[data-target="raw-view"]').click();
         }
-
-        downloadBtn.disabled = false;
     }
 
-    // --- Görsel Editör (Tree/Form) Oluşturma ---
-    // Bu fonksiyon JSON objesini okuyup input alanlarına çevirir.
-    function renderVisualEditor(data, container, path = "") {
-        container.innerHTML = ""; 
+    // Hex Editör Oluşturucu
+    function renderHexEditor() {
+        const hexBody = document.getElementById("hex-body");
+        hexBody.innerHTML = ""; // Temizle
 
-        function createNode(obj, currentPath, parentElement) {
-            for (let key in obj) {
-                if (obj.hasOwnProperty(key)) {
-                    const value = obj[key];
-                    const newPath = currentPath ? `${currentPath}.${key}` : key;
-
-                    if (typeof value === 'object' && value !== null) {
-                        // Alt Obje / Dizi
-                        const title = document.createElement("div");
-                        title.className = "kv-object-title";
-                        title.innerText = key;
-                        parentElement.appendChild(title);
-
-                        const indent = document.createElement("div");
-                        indent.className = "kv-indent";
-                        parentElement.appendChild(indent);
-
-                        createNode(value, newPath, indent);
-                    } else {
-                        // Basit Değer (String, Number, Boolean)
-                        const row = document.createElement("div");
-                        row.className = "kv-row";
-
-                        const label = document.createElement("div");
-                        label.className = "kv-key";
-                        label.innerText = key;
-                        label.title = key;
-
-                        const input = document.createElement("input");
-                        input.type = typeof value === 'number' ? 'number' : 'text';
-                        input.className = "kv-val-input";
-                        input.value = value;
-                        
-                        // Input değiştikçe ana currentData objesini güncelle
-                        input.addEventListener("input", (e) => {
-                            let val = e.target.value;
-                            if(typeof value === 'number') val = Number(val);
-                            if(typeof value === 'boolean') val = val === 'true';
-                            updateDataByPath(currentData, newPath, val);
-                        });
-
-                        row.appendChild(label);
-                        row.appendChild(input);
-                        parentElement.appendChild(row);
-                    }
+        // Performans için sadece ilk 1024 satırı (yaklaşık 16KB) renderlayalım.
+        // GVAS dosyaları genellikle bu aralıktadır.
+        const maxBytesToRender = Math.min(uint8Array.length, 16384); 
+        
+        let htmlContent = "";
+        
+        for (let i = 0; i < maxBytesToRender; i += 16) {
+            let hexRow = `<div class="hex-row">`;
+            
+            // Offset (Sol sütun)
+            hexRow += `<div class="hex-offset-col">${i.toString(16).padStart(8, '0').toUpperCase()}</div>`;
+            
+            // Hex Baytları (Orta sütun)
+            let hexBytes = "";
+            let asciiChars = "";
+            
+            for (let j = 0; j < 16; j++) {
+                if (i + j < maxBytesToRender) {
+                    const byte = uint8Array[i + j];
+                    const hexValue = byte.toString(16).padStart(2, '0').toUpperCase();
+                    
+                    // Düzenlenebilir bayt span'ı
+                    hexBytes += `<span class="hex-byte" data-index="${i+j}" title="Tıkla ve değiştir">${hexValue}</span> `;
+                    
+                    // ASCII karakterini çıkar (Yazdırılamayan karakterler için nokta koy)
+                    asciiChars += (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : ".";
+                } else {
+                    hexBytes += "   "; // Boşluk
                 }
             }
+            
+            hexRow += `<div class="hex-bytes-col">${hexBytes}</div>`;
+            
+            // ASCII Karakterleri (Sağ sütun)
+            // HTML karakter karışıklığını önlemek için replace kullanıyoruz
+            asciiChars = asciiChars.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            hexRow += `<div class="hex-ascii-col">${asciiChars}</div>`;
+            
+            hexRow += `</div>`;
+            htmlContent += hexRow;
         }
+        
+        hexBody.innerHTML = htmlContent;
 
-        const rootDiv = document.createElement("div");
-        createNode(data, "", rootDiv);
-        container.appendChild(rootDiv);
+        // Baytları tıklayıp düzenleme özelliği
+        document.querySelectorAll('.hex-byte').forEach(span => {
+            span.addEventListener('click', function() {
+                const index = parseInt(this.getAttribute('data-index'));
+                const currentHex = this.innerText;
+                const newHex = prompt(`Adres: 0x${index.toString(16).toUpperCase()}\nMevcut Değer: ${currentHex}\nYeni değeri girin (Örn: FF, 0A, vb.):`, currentHex);
+                
+                if (newHex && /^[0-9A-Fa-f]{1,2}$/.test(newHex)) {
+                    const newByte = parseInt(newHex, 16);
+                    uint8Array[index] = newByte; // Bellekteki Array'i güncelle
+                    this.innerText = newHex.padStart(2, '0').toUpperCase(); // Arayüzü güncelle
+                    this.style.color = "var(--success-color)"; // Değiştiğini belli et
+                } else if (newHex !== null) {
+                    alert("Lütfen sadece geçerli bir Onaltılık (Hex) sayı girin! (00 - FF arası)");
+                }
+            });
+        });
     }
 
-    // JSON içindeki derin (deep) veriyi path (örn: "player.stats.health") ile günceller
-    function updateDataByPath(obj, path, value) {
-        const keys = path.split('.');
-        const lastKey = keys.pop();
-        const deepObj = keys.reduce((o, key) => o[key], obj);
-        deepObj[lastKey] = value;
-    }
-
-    // --- Araçlar ---
-    document.getElementById("btn-base64-decode").addEventListener("click", () => {
-        try {
-            const decoded = atob(rawEditor.value);
-            processContent(decoded, {name: currentFileName + " (Decoded)", size: decoded.length});
-        } catch (e) {
-            alert("Bu geçerli bir Base64 dizgesi değil!");
-        }
-    });
-
-    document.getElementById("btn-format-json").addEventListener("click", () => {
-        try {
-            const parsed = JSON.parse(rawEditor.value);
-            rawEditor.value = JSON.stringify(parsed, null, 4);
-        } catch (e) {
-            alert("Formatlamak için geçerli bir JSON olmalı!");
-        }
-    });
-
-    // --- Kaydet & İndir ---
+    // Kaydet ve İndir Butonu (Düzenlenmiş Binary Dosyasını İndir)
     downloadBtn.addEventListener("click", () => {
-        let finalContent = rawEditor.value;
+        let blob;
         
-        // Eğer JSON olarak işlenmişse ve görsel editör güncellenmişse, datayı string yap
-        if (isJson) {
-            finalContent = JSON.stringify(currentData, null, 4);
+        // Eğer dosya GVAS/Binary ise güncellenmiş uint8Array'i indir
+        if (isGVAS) {
+            blob = new Blob([uint8Array], { type: "application/octet-stream" });
+        } else {
+            // Metin dosyasıysa Textarea'dan al
+            const finalContent = document.getElementById("raw-editor").value;
+            blob = new Blob([finalContent], { type: "text/plain" });
         }
 
-        const blob = new Blob([finalContent], { type: "text/plain" });
         const url = URL.createObjectURL(blob);
-        
         const a = document.createElement("a");
         a.href = url;
         a.download = "edited_" + currentFileName;
@@ -178,5 +159,4 @@ document.addEventListener("DOMContentLoaded", () => {
             URL.revokeObjectURL(url);
         }, 0);
     });
-
 });
